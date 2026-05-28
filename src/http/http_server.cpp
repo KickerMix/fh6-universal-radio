@@ -5,6 +5,7 @@
 #include "fh6/log.hpp"
 #include "fh6/sources/local_file_source.hpp"
 #include "fh6/sources/youtube_music_source.hpp"
+#include "fh6/sources/jellyfin_source.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -125,6 +126,16 @@ json config_to_json(const Config& c) {
              {"default_playlist", c.youtube_music.default_playlist},
              {"shuffle", c.youtube_music.shuffle},
          }},
+        {"jellyfin",
+         json{
+             {"enabled", c.jellyfin.enabled},
+             {"server_url", c.jellyfin.server_url},
+             {"api_key", c.jellyfin.api_key},
+             {"user_id", c.jellyfin.user_id},
+             {"default_playlist", c.jellyfin.default_playlist},
+             {"ffmpeg_path", c.jellyfin.ffmpeg_path},
+             {"shuffle", c.jellyfin.shuffle},
+         }},
         {"audio",
          json{
              {"output_gain", c.audio.output_gain},
@@ -176,6 +187,15 @@ void apply_patch(Config& c, const json& j) {
         c.youtube_music.default_playlist =
             pull(*it, "default_playlist", c.youtube_music.default_playlist);
         c.youtube_music.shuffle = pull(*it, "shuffle", c.youtube_music.shuffle);
+    }
+    if (auto it = j.find("jellyfin"); it != j.end()) {
+        c.jellyfin.enabled          = pull(*it, "enabled", c.jellyfin.enabled);
+        c.jellyfin.server_url       = pull(*it, "server_url", c.jellyfin.server_url);
+        c.jellyfin.api_key          = pull(*it, "api_key", c.jellyfin.api_key);
+        c.jellyfin.user_id          = pull(*it, "user_id", c.jellyfin.user_id);
+        c.jellyfin.default_playlist = pull(*it, "default_playlist", c.jellyfin.default_playlist);
+        c.jellyfin.ffmpeg_path      = pull(*it, "ffmpeg_path", c.jellyfin.ffmpeg_path);
+        c.jellyfin.shuffle          = pull(*it, "shuffle", c.jellyfin.shuffle);
     }
     if (auto it = j.find("audio"); it != j.end()) {
         c.audio.output_gain = pull(*it, "output_gain", c.audio.output_gain);
@@ -498,6 +518,24 @@ struct HttpServer::Impl {
             yt->set_shuffle(shuffle);
             store.patch([shuffle](Config& c) { c.youtube_music.shuffle = shuffle; });
             return ok();
+        }
+        if (req.method == "POST" && req.path == "/api/source/jellyfin/cast") {
+            auto* jf = dynamic_cast<JellyfinSource*>(mgr.find("jellyfin"));
+            if (!jf) return fail(400, "Jellyfin source not enabled");
+            
+            auto j = json::parse(req.body);
+            // check if Jellyfin is currently the active radio station
+            const bool was_active = (mgr.active() == jf);
+            jf->cast(j.value("playlist_id", ""));
+
+            // if it was already active, flush the old song out of the buffer instantly
+            if (was_active) {
+                mgr.ring().drain();
+            }
+
+            mgr.switch_to("jellyfin");
+            
+            return ok(json{{"success", true}});
         }
         if (m == "POST" && p == "/api/source/local_files/rescan") {
             auto* lf = find_typed<sources::LocalFileSource>("local_files");

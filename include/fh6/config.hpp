@@ -40,6 +40,16 @@ struct YouTubeMusicConfig {
     bool shuffle = true;
 };
 
+struct JellyfinConfig {
+    bool enabled = false;
+    std::string server_url;
+    std::string api_key;
+    std::string user_id;
+    std::string default_playlist;
+    std::string ffmpeg_path;
+    bool shuffle = true;
+};
+
 struct AudioConfig {
     float output_gain = 1.0f;
 };
@@ -49,6 +59,7 @@ struct Config {
     LocalFilesConfig local_files;
     YouTubeMusicConfig youtube_music;
     AudioConfig audio;
+    JellyfinConfig jellyfin;
     PlaybackConfig playback;
 };
 

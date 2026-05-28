@@ -11,6 +11,7 @@
 #include "fh6/http/http_server.hpp"
 #include "fh6/sources/local_file_source.hpp"
 #include "fh6/sources/youtube_music_source.hpp"
+#include "fh6/sources/jellyfin_source.hpp"
 
 #include <windows.h>
 #include <array>
@@ -118,6 +119,12 @@ void run_bridge(HMODULE self) noexcept {
         } else if (!c.youtube_music.enabled && mgr.find("youtube_music")) {
             mgr.unregister_source("youtube_music");
         }
+        if (c.jellyfin.enabled && !mgr.find("jellyfin")) {
+            auto src = std::make_unique<JellyfinSource>(c.jellyfin);
+            if (src->initialize()) mgr.register_source(std::move(src));
+        } else if (!c.jellyfin.enabled && mgr.find("jellyfin")) {
+            mgr.unregister_source("jellyfin");
+        }
     };
 
     sync_sources(cfg);
@@ -157,6 +164,9 @@ void run_bridge(HMODULE self) noexcept {
         }
         if (auto* yt = dynamic_cast<sources::YouTubeMusicSource*>(mgr.find("youtube_music"))) {
             yt->set_shuffle(c.youtube_music.shuffle);
+        }
+        if (auto* jf = dynamic_cast<JellyfinSource*>(mgr.find("jellyfin"))) {
+            jf->set_config(c.jellyfin);
         }
 
         for (auto* s : mgr.sources_snapshot()) s->set_playback_options(c.playback);

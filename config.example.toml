@@ -27,6 +27,15 @@ ffmpeg_path        = ''                # blank = `ffmpeg`  on PATH
 default_playlist   = ""
 shuffle            = true
 
+[jellyfin]
+enabled            = false
+server_url         = ''                # e.g. 'http://127.0.0.1:8096'
+api_key            = ''                # generate this in the Jellyfin dashboard
+user_id            = ''                # the ID of the user to track playback against
+default_playlist   = ''                # jellyfin playlist ID goes here
+ffmpeg_path        = ''                # blank = `ffmpeg` on PATH
+shuffle            = true              # true or false
+
 [audio]
 output_gain = 1.0
 
