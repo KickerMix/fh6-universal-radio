@@ -336,14 +336,12 @@ uint32_t __stdcall DSPBridge::read_callback(void* /*dsp_state*/, float* in_buf, 
 
     // Declare our DSP output: stereo (default, force_stereo path) or mono
     // (when force_stereo is off and we're feeding the 3D panner -- stereo
-    // into a 3D panner phase-cancels into a metallic mess). Clamp to
-    // whatever FMOD pre-sized out_buf for: writing more channels than
-    // allocated is a heap overflow that crashes the mixer a few seconds
-    // later.
-    const int32_t desired = b->force_stereo_audio() ? 2 : 1;
-    const int32_t out_ch  = (out_channels && *out_channels > 0)
-                                ? std::min(*out_channels, desired)
-                                : desired;
+    // into a 3D panner phase-cancels into a metallic mess). FMOD does not
+    // re-query *out_channels after a mid-stream setMode, so we have to
+    // overwrite it unconditionally; clamping to its incoming value would
+    // pin us to whatever the channel was first allocated for (mono on the
+    // 3D radio channel) and silently ignore force_stereo.
+    const int32_t out_ch = b->force_stereo_audio() ? 2 : 1;
     if (out_channels) *out_channels = out_ch;
     const std::size_t total = static_cast<std::size_t>(length) * out_ch;
 
